@@ -7,6 +7,7 @@
 #include "elm.h"
 #include "matrix.h"
 #include "MPI_node.h"
+#include "alg.h"
 
 int main(int argc,char **argv){
 	int m;
@@ -62,9 +63,9 @@ int main(int argc,char **argv){
 		master_rank = MPIN_get_master_rank(node_id);
 		if(rank == master_rank){
 			int i,j = 0,k = 0;
-			int node_size,child_rank;
+			int process_num,child_rank;
 			char dir[20];
-			float *train_set,*T,*input,*weight,*bias,*tempI,*Ht,*Hh,*tranpH;
+			float *train_set,*T,*input,*weight,*bias,*tempI,*Ht,*Hh,*tranpH,*tempht,*temphh;
 			train_set = (float *)calloc(m * NUMROWS,sizeof(float)); 				/* m * NUMROWS */
 			T = (float *)calloc(m * OUTPUT_NEURONS,sizeof(float)); 					/* m * OUTPUT_NEURONS */
 			input = (float *)calloc(m * INPUT_NEURONS,sizeof(float)); 				/* m * INPUT_NEURONS */
@@ -105,7 +106,8 @@ int main(int argc,char **argv){
 			//HT
 			MultiplyMatrix_cblas_s(tranpH,HIDDEN_NEURONS,m,tempI,m,HIDDEN_NEURONS,Hh);
 			//先接收本地的子进程发来的数据并累加
-			for(i = 1;i < node_size;i++){
+			process_num = MPIN_get_node_process_size(node_id);
+			for(i = 1;i < process_num;i++){
 				child_rank = MPIN_get_node_process_rank(node_id,i);
 				MPI_Recv(temphh,HIDDEN_NEURONS * HIDDEN_NEURONS,MPI_FLOAT,child_rank,0,MPI_COMM_WORLD,&status);
 				MPI_Recv(tempht,HIDDEN_NEURONS * OUTPUT_NEURONS,MPI_FLOAT,child_rank,1,MPI_COMM_WORLD,&status);

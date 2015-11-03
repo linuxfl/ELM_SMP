@@ -37,6 +37,7 @@ ${DIR_SRC}/%.o:${DIR_SRC}/%.c
 clean:
 	rm ${DIR_SRC}/*.o ${DIR_SRC}/*~ -rf
 	rm ${DIR_INC}/*~ -rf
-	rm *~ -rf
+	rm ${MPI_NODE_SRC}/*.o -rf
+	rm main *~ -rf
 
 
