@@ -10,6 +10,15 @@
 #include <omp.h>
 #include "../include/matrix.h"
 
+void InitMatrix(float *matrix,int row,int column)
+{
+	int i;
+	for(i = 0;i < row*column;i++)
+	{
+		matrix[i] = 0.0;
+	}
+}
+
 int LoadMatrix_s(float *matrix,char *filepath,int row,int column)
 {
 	int i,j;

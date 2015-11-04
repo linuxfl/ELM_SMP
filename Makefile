@@ -8,7 +8,7 @@ DIR_INC = ./include
 #c complier
 #CC = gcc
 #mpi gcc
-CC = /home/fangling/mpi/bin/mpicc
+CC = mpicc
 
 INC_CLAS        = /opt/OpenBLAS/include/
 LIB_CLAS        = /opt/OpenBLAS/lib/
@@ -37,7 +37,7 @@ ${DIR_SRC}/%.o:${DIR_SRC}/%.c
 clean:
 	rm ${DIR_SRC}/*.o ${DIR_SRC}/*~ -rf
 	rm ${DIR_INC}/*~ -rf
-	rm ${MPI_NODE_SRC}/*.o -rf
+	rm ${MPI_NODE_SRC}/*.o ${MPI_NODE_SRC}/*.~ -rf
 	rm main *~ -rf
 
 

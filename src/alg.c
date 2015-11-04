@@ -40,6 +40,7 @@ void create_dtree(int size,int d){
 */
 int MPIN_Reduce(float *sendbuf,float *recvbuf,int count,int cur_node_id,int cur_rank,int tag)
 {
+
 	MPI_Status status;
 	struct child *c;
 	int rank;
@@ -51,7 +52,8 @@ int MPIN_Reduce(float *sendbuf,float *recvbuf,int count,int cur_node_id,int cur_
 	//从子进程接收数据
 	while(c){
 		if(c->id != -1){//如果当前节点有孩子
-			rank = MPIN_get_master_rank(cur_node_id);
+			rank = MPIN_get_master_rank(c->id);
+			printf("file:%s,func:%s,line:%d id %d rank:%d\n",__FILE__,__func__,__LINE__,c->id,rank);
 			MPI_Recv(recvbuf,count,MPI_FLOAT,rank,tag,MPI_COMM_WORLD,&status);
 			AddMatrix(recvbuf,sendbuf,count);
 		}else{
@@ -60,6 +62,7 @@ int MPIN_Reduce(float *sendbuf,float *recvbuf,int count,int cur_node_id,int cur_
 		c = c->next;
 	}
 	int parent_rank = dt[cur_node_id].parent;
+	printf("file:%s,func:%s,line:%d parent_rank:%d\n",__FILE__,__func__,__LINE__,parent_rank);
 	if(parent_rank != -1) //不是根进程
 	{
 		MPI_Send(sendbuf,count,MPI_FLOAT,parent_rank,tag,MPI_COMM_WORLD);

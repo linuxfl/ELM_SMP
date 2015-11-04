@@ -8,7 +8,7 @@
 #define OUTPUT_NEURONS 1
 
 /*the size of data set*/
-#define DATASET 180000
+#define DATASET 210000
 /*elm train*/
 
 float RandomFloat(float start,float end);

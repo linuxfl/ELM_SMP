@@ -10,26 +10,30 @@
 #include "alg.h"
 
 int main(int argc,char **argv){
+
 	int m;
 	int rank,size; 
 	MPI_Status status;
+	double starttime,endtime;
 	MPI_Init(&argc,&argv);
 	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 	MPI_Comm_size(MPI_COMM_WORLD,&size);
 	MPIN_init("./hostfile",size);
 	//创建节点间拓扑结构
-	create_dtree(size,2);
+	create_dtree(2,2);
 	//将样本集均等划分，主进程不处理样本，子进程处理样本
 	m = DATASET/(size-1);
 	printf(" m = %d\n",m);
 	if(rank == 0){
-		int i,node_id;
+		int i,node_id,process_num,child_rank;
 		float *Ht,*Hh,*tempht,*temphh,*result;
 		result = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float));	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 		Ht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 		tempht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 		Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 		temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
+
+		starttime = MPI_Wtime();
 		//初始化
 		/*权重在计算过程中需要进行转置，因为参数全是随机，所以为了方便计算，
 		开始定义就进行转置，原行列为HIDDEN_NEURONS*INPUT_NEURONS*/
@@ -41,9 +45,20 @@ int main(int argc,char **argv){
 		printf("file:%s,func:%s,line:%d rank:%d\n",__FILE__,__func__,__LINE__,rank);
 		MPI_Bcast(weight,INPUT_NEURONS * HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
 		MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
-		
-		//用二叉树算法进行节点间的归约
+
+		InitMatrix(Ht,HIDDEN_NEURONS,OUTPUT_NEURONS);
+		InitMatrix(Hh,HIDDEN_NEURONS,HIDDEN_NEURONS);
+
 		node_id = MPIN_get_node_by_rank(rank);
+		process_num = MPIN_get_node_process_size(node_id);
+		for(i = 1;i < process_num;i++){
+			child_rank = MPIN_get_node_process_rank(node_id,i);
+			MPI_Recv(temphh,HIDDEN_NEURONS * HIDDEN_NEURONS,MPI_FLOAT,child_rank,0,MPI_COMM_WORLD,&status);
+			MPI_Recv(tempht,HIDDEN_NEURONS * OUTPUT_NEURONS,MPI_FLOAT,child_rank,1,MPI_COMM_WORLD,&status);
+			AddMatrix(tempht,Ht,HIDDEN_NEURONS * OUTPUT_NEURONS);
+			AddMatrix(temphh,Hh,HIDDEN_NEURONS * HIDDEN_NEURONS);
+		}
+		//用二叉树算法进行节点间的归约
 		MPIN_Reduce(Ht,tempht,HIDDEN_NEURONS * OUTPUT_NEURONS,node_id,rank,0);
 		MPIN_Reduce(Hh,temphh,HIDDEN_NEURONS * HIDDEN_NEURONS,node_id,rank,1);
 		//1、H'H累加的结果求解其逆
@@ -55,6 +70,8 @@ int main(int argc,char **argv){
 		InverseMatirx_cblas_s(Hh,HIDDEN_NEURONS);
 		//2、将上面两个结果相乘得到最终结果
 		MultiplyMatrix_cblas_s(Hh,HIDDEN_NEURONS,HIDDEN_NEURONS,Ht,HIDDEN_NEURONS,OUTPUT_NEURONS,result);
+		endtime = MPI_Wtime();
+		printf("use time :%f \n",endtime - starttime);
 		//回归准确率测试
 		SaveMatrix_s(result,"./result/result",HIDDEN_NEURONS,OUTPUT_NEURONS);	
 	}else{
@@ -62,6 +79,7 @@ int main(int argc,char **argv){
 		node_id = MPIN_get_node_by_rank(rank);
 		master_rank = MPIN_get_master_rank(node_id);
 		if(rank == master_rank){
+			printf("file:%s,func:%s,line:%d rank:%d\n",__FILE__,__func__,__LINE__,rank);
 			int i,j = 0,k = 0;
 			int process_num,child_rank;
 			char dir[20];
@@ -77,16 +95,16 @@ int main(int argc,char **argv){
 			tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 			/* m * HIDDEN_NEURONS */
 			tempht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 			temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
-			
+
 			MPI_Bcast(weight,(INPUT_NEURONS)*(HIDDEN_NEURONS),MPI_FLOAT,0,MPI_COMM_WORLD);
 			MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
-			sprintf(dir,"./sample/p%d",rank);
+
+			sprintf(dir,"./sample/bigp%d",rank);
 			//从本地读取相应的样本集
 			if(LoadMatrix_s(train_set,dir,m,NUMROWS) == 0){
 				printf("rank %d:load input file error!!!\n",rank);
 				MPI_Abort(MPI_COMM_WORLD,-1);
 			}
-			
 			/*将数据集划分成输入和输出*/
 			for(i = 0;i<m*NUMROWS;i++){
 				if(i % NUMROWS == 0){
@@ -114,10 +132,13 @@ int main(int argc,char **argv){
 				AddMatrix(tempht,Ht,HIDDEN_NEURONS * OUTPUT_NEURONS);
 				AddMatrix(temphh,Hh,HIDDEN_NEURONS * HIDDEN_NEURONS);
 			}
+			printf("file:%s,func:%s,line:%d rank:%d\n",__FILE__,__func__,__LINE__,rank);
+
 			//再将累加结果在节点间二叉树算法进行归约
 			MPIN_Reduce(Ht,tempht,HIDDEN_NEURONS * OUTPUT_NEURONS,node_id,rank,0);
 			MPIN_Reduce(Hh,temphh,HIDDEN_NEURONS * HIDDEN_NEURONS,node_id,rank,1);
 		}else{
+			printf("file:%s,func:%s,line:%d rank:%d\n",__FILE__,__func__,__LINE__,rank);
 			int i,j = 0,k = 0;
 			char dir[20];
 			float *train_set,*T,*input,*weight,*bias,*tempI,*Ht,*Hh,*tranpH;
@@ -130,9 +151,11 @@ int main(int argc,char **argv){
 			Ht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 			Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 			tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 			/* m * HIDDEN_NEURONS */
+
 			MPI_Bcast(weight,(INPUT_NEURONS)*(HIDDEN_NEURONS),MPI_FLOAT,0,MPI_COMM_WORLD);
 			MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
-			sprintf(dir,"./sample/p%d",rank);
+
+			sprintf(dir,"./sample/bigp%d",rank);
 			//从本地读取相应的样本集
 			if(LoadMatrix_s(train_set,dir,m,NUMROWS) == 0){
 				printf("rank %d:load input file error!!!\n",rank);
