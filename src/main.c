@@ -22,22 +22,29 @@ int main(int argc,char **argv){
 	//创建节点间拓扑结构
 	create_dtree(3,2);
 	//将样本集均等划分，主进程不处理样本，子进程处理样本
-	m = DATASET/(size-1);
+	m = DATASET/size;
 	//printf(" m = %d\n",m);
 	if(rank == 0){
-		int i,node_id,process_num,child_rank;
-		float *Ht,*Hh,*tempht,*temphh,*result;
+		char dir[20];
+		int i,j = 0,k = 0,node_id,process_num,child_rank;
+		float *Ht,*Hh,*tempht,*temphh,*result,*train_set,*T,*input,*tempI,*tranpH;
+		train_set = (float *)calloc(m * NUMROWS,sizeof(float)); 
+		T = (float *)calloc(m * OUTPUT_NEURONS,sizeof(float)); 					/* m * OUTPUT_NEURONS */
+		input = (float *)calloc(m * INPUT_NEURONS,sizeof(float)); 
+		tempI = (float *)calloc(m * HIDDEN_NEURONS,sizeof(float)); 				/* m * HIDDEN_NEURONS */
 		result = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float));	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 		Ht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 		tempht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 		Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 		temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
+		tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 				/* m * HIDDEN_NEURONS */
+
 		printf("begin tranning...\n");
 		starttime = MPI_Wtime();
 		//初始化
 		/*权重在计算过程中需要进行转置，因为参数全是随机，所以为了方便计算，
 		开始定义就进行转置，原行列为HIDDEN_NEURONS*INPUT_NEURONS*/
-		float *weight = (float *)calloc(INPUT_NEURONS*HIDDEN_NEURONS,sizeof(float)); /*INPUT_NEURONS * HIDDEN_NEURONS */
+		float *weight = (float *)calloc(INPUT_NEURONS*HIDDEN_NEURONS,sizeof(float)); 	/*INPUT_NEURONS * HIDDEN_NEURONS */
 		float *bias = (float *)calloc(HIDDEN_NEURONS,sizeof(float)); 
 		RandomWeight_s(weight,INPUT_NEURONS,HIDDEN_NEURONS);
 		SaveMatrix_s(weight,"./result/weight",INPUT_NEURONS,HIDDEN_NEURONS);	
@@ -47,8 +54,34 @@ int main(int argc,char **argv){
 		MPI_Bcast(weight,INPUT_NEURONS * HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
 		MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
 
-		InitMatrix(Ht,HIDDEN_NEURONS,OUTPUT_NEURONS);
-		InitMatrix(Hh,HIDDEN_NEURONS,HIDDEN_NEURONS);
+		/*InitMatrix(Ht,HIDDEN_NEURONS,OUTPUT_NEURONS);
+		InitMatrix(Hh,HIDDEN_NEURONS,HIDDEN_NEURONS);*/
+
+		sprintf(dir,"./sample/%d",rank);
+		printf("direction = %s\n",dir);
+		//从本地读取相应的样本集
+		if(LoadMatrix_s(train_set,dir,m,NUMROWS) == 0){
+			printf("rank %d:load input file error!!!\n",rank);
+			MPI_Abort(MPI_COMM_WORLD,-1);
+		}
+		/*将数据集划分成输入和输出*/
+		for(i = 0;i<m*NUMROWS;i++){
+			if(i % NUMROWS == 0){
+				T[k++] = train_set[i];
+			}else{
+				input[j++] = train_set[i];
+			}
+		}
+		//input * weight + B;
+		MultiplyMatrix_cblas_s(input,m,INPUT_NEURONS,weight,INPUT_NEURONS,HIDDEN_NEURONS,tempI);
+		AddMatrix_bais_s(tempI,bias,m,HIDDEN_NEURONS);
+		//sigmoid
+		SigmoidHandle_s(tempI,m,HIDDEN_NEURONS);
+		TranspositionMatrix_s(tempI,tranpH,m,HIDDEN_NEURONS);
+		//H'H
+		MultiplyMatrix_cblas_s(tranpH,HIDDEN_NEURONS,m,T,m,OUTPUT_NEURONS,Ht);
+		//HT
+		MultiplyMatrix_cblas_s(tranpH,HIDDEN_NEURONS,m,tempI,m,HIDDEN_NEURONS,Hh);
 
 		node_id = MPIN_get_node_by_rank(rank);
 		process_num = MPIN_get_node_process_size(node_id);
@@ -88,14 +121,14 @@ int main(int argc,char **argv){
 			train_set = (float *)calloc(m * NUMROWS,sizeof(float)); 				/* m * NUMROWS */
 			T = (float *)calloc(m * OUTPUT_NEURONS,sizeof(float)); 					/* m * OUTPUT_NEURONS */
 			input = (float *)calloc(m * INPUT_NEURONS,sizeof(float)); 				/* m * INPUT_NEURONS */
-			weight = (float *)calloc(INPUT_NEURONS * HIDDEN_NEURONS,sizeof(float)); /* INPUT_NEURONS * HIDDEN_NEURONS */
+			weight = (float *)calloc(INPUT_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* INPUT_NEURONS * HIDDEN_NEURONS */
 			bias = (float *)calloc(HIDDEN_NEURONS,sizeof(float)); 					/* HIDDEN_NEURONS */
 			tempI = (float *)calloc(m * HIDDEN_NEURONS,sizeof(float)); 				/* m * HIDDEN_NEURONS */
-			Ht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
-			Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
-			tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 			/* m * HIDDEN_NEURONS */
-			tempht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
-			temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
+			Ht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 			/* HIDDEN_NEURONS * OUTPUT_NEURONS */
+			Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 			/* HIDDEN_NEURONS * HIDDEN_NEURONS */
+			tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 				/* m * HIDDEN_NEURONS */
+			tempht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * OUTPUT_NEURONS */
+			temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 
 			MPI_Bcast(weight,(INPUT_NEURONS)*(HIDDEN_NEURONS),MPI_FLOAT,0,MPI_COMM_WORLD);
 			MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
@@ -144,12 +177,12 @@ int main(int argc,char **argv){
 			train_set = (float *)calloc(m * NUMROWS,sizeof(float)); 				/* m * NUMROWS */
 			T = (float *)calloc(m * OUTPUT_NEURONS,sizeof(float)); 					/* m * OUTPUT_NEURONS */
 			input = (float *)calloc(m * INPUT_NEURONS,sizeof(float)); 				/* m * INPUT_NEURONS */
-			weight = (float *)calloc(INPUT_NEURONS * HIDDEN_NEURONS,sizeof(float)); /* INPUT_NEURONS * HIDDEN_NEURONS */
+			weight = (float *)calloc(INPUT_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* INPUT_NEURONS * HIDDEN_NEURONS */
 			bias = (float *)calloc(HIDDEN_NEURONS,sizeof(float)); 					/* HIDDEN_NEURONS */
 			tempI = (float *)calloc(m * HIDDEN_NEURONS,sizeof(float)); 				/* m * HIDDEN_NEURONS */
-			Ht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * OUTPUT_NEURONS */
-			Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
-			tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 			/* m * HIDDEN_NEURONS */
+			Ht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 			/* HIDDEN_NEURONS * OUTPUT_NEURONS */
+			Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 			/* HIDDEN_NEURONS * HIDDEN_NEURONS */
+			tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 				/* m * HIDDEN_NEURONS */
 
 			MPI_Bcast(weight,(INPUT_NEURONS)*(HIDDEN_NEURONS),MPI_FLOAT,0,MPI_COMM_WORLD);
 			MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
