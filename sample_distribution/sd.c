@@ -60,7 +60,7 @@ int main(int argc,char **argv)
 		proc_size = MPIN_get_node_process_size(i);
 		for(j = 0;j < proc_size;j++){
 			rank = MPIN_get_node_process_rank(i,j);
-			sprintf(temp,"%d",rank);
+			sprintf(temp,"%s%d",DIR,rank);
 			if((ns[i].fd[j] = open(temp,O_CREAT|O_WRONLY,0777)) == -1){
 				perror("open2");
 				exit(EXIT_FAILURE);
