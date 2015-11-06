@@ -3,7 +3,7 @@
 #include <math.h>
 #include "../include/matrix.h"
 #include "../include/elm.h"
-#define TESTDATA 10000
+#define TESTDATA 1000
 
 int main(int argc,char **argv){
 

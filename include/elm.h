@@ -6,7 +6,7 @@
 #define INPUT_NEURONS (NUMROWS-1)
 #define HIDDEN_NEURONS 1500
 #define OUTPUT_NEURONS 1
-
+#define LUMMA 5
 /*the size of data set*/
 #define DATASET 280000
 /*elm train*/

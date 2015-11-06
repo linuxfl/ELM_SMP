@@ -66,7 +66,7 @@ int main(int argc,char **argv){
 		//岭回归
 		for(i = 0;i < HIDDEN_NEURONS*HIDDEN_NEURONS;i++){
 				if(i % HIDDEN_NEURONS == i / HIDDEN_NEURONS) 
-					Hh[i] += 1; 
+					Hh[i] += LUMMA; 
 		}
 		InverseMatirx_cblas_s(Hh,HIDDEN_NEURONS);
 		//2、将上面两个结果相乘得到最终结果
