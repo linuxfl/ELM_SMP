@@ -4,7 +4,7 @@
 /*number of neurons on every layer*/
 #define NUMROWS 6
 #define INPUT_NEURONS (NUMROWS-1)
-#define HIDDEN_NEURONS 100
+#define HIDDEN_NEURONS 1500
 #define OUTPUT_NEURONS 1
 
 /*the size of data set*/

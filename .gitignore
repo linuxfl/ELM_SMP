@@ -3,3 +3,5 @@ result
 main
 hostfile
 result/
+sample/
+test/regression_test

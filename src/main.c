@@ -40,7 +40,9 @@ int main(int argc,char **argv){
 		float *weight = (float *)calloc(INPUT_NEURONS*HIDDEN_NEURONS,sizeof(float)); /*INPUT_NEURONS * HIDDEN_NEURONS */
 		float *bias = (float *)calloc(HIDDEN_NEURONS,sizeof(float)); 
 		RandomWeight_s(weight,INPUT_NEURONS,HIDDEN_NEURONS);
+		SaveMatrix_s(weight,"./result/weight",INPUT_NEURONS,HIDDEN_NEURONS);	
 		RandomBiase(bias,HIDDEN_NEURONS);
+		SaveMatrix_s(bias,"./result/bias",1,HIDDEN_NEURONS);
 		//随机权重和偏置，并将权重和偏置广播给所有子进程
 		MPI_Bcast(weight,INPUT_NEURONS * HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
 		MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
