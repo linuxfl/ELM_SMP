@@ -3,7 +3,7 @@
 #include <math.h>
 #include "../include/matrix.h"
 #include "../include/elm.h"
-#define TESTDATA 1000
+#define TESTDATA 10000
 
 int main(int argc,char **argv){
 
@@ -53,18 +53,18 @@ int main(int argc,char **argv){
 	/*得到随机的偏置和权重*/
 	//RandomWeight(weight,HIDDEN_NEURONS,INPUT_NEURONS);
 	//RandomBiase(biase,HIDDEN_NEURONS);
-	if(LoadMatrix(tranpw,"../result/weight",INPUT_NEURONS,HIDDEN_NEURONS) == 0){
+	if(LoadMatrix(tranpw,"../result/weight",INPUT_NEURONS,HIDDEN_NEURONS,0) == 0){
 		printf("load input file error!!!\n");	
 		return 0;
 	}
 	TranspositionMatrix(tranpw,weight,INPUT_NEURONS,HIDDEN_NEURONS);
-	if(LoadMatrix_s(biase,"../result/bias",1,HIDDEN_NEURONS) == 0){
+	if(LoadMatrix_s(biase,"../result/bias",1,HIDDEN_NEURONS,0) == 0){
 		printf("load input file error!!!\n");	
 		return 0;
 	}
 	/*加载数据集到内存*/
 	printf("begin to load input from the file...\n");
-	if(LoadMatrix(train_set,"../sample/1",TESTDATA,NUMROWS) == 0){
+	if(LoadMatrix(train_set,"../sample/0",TESTDATA,NUMROWS,0) == 0){
 		printf("load input file error!!!\n");	
 		return 0;
 	}
@@ -91,7 +91,7 @@ int main(int argc,char **argv){
 	printf("begin to compute step 4...\n");
 	TranspositionMatrix(tempH,H,HIDDEN_NEURONS,TESTDATA);
 	printf("begin to load input from the file...\n");
-	if(LoadMatrix(out,"../result/result",HIDDEN_NEURONS,OUTPUT_NEURONS) == 0){
+	if(LoadMatrix(out,"../result/result",HIDDEN_NEURONS,OUTPUT_NEURONS,0) == 0){
 		printf("load input file error!!!\n");	
 		return 0;
 	}

@@ -19,8 +19,8 @@ void InverseMatirx_clas(float **tempH,int column);
 /*save the result to the file*/
 int SaveMatrix(float **matrix,char *filepath,int row,int column);
 /*load the sample from file in matrix*/
-int LoadMatrix(float **matrix,char *filepath,int row,int column);
-int LoadMatrix_s(float *matrix,char *filepath,int row,int column);
+int LoadMatrix_s(float *matrix,char *filepath,int row,int column,int type);
+int LoadMatrix(float **matrix,char *filepath,int row,int column,int type);
 int TranspositionMatrix_s(float *matrix, float *transpositionMatirx, int row, int column);
 void InverseMatirx_cblas_s(float *H,int row);
 void MultiplyMatrix_cblas_s(float *matrix1,int row1,int column1,float *matrix2,int row2,int column2,float *matrix3);

@@ -19,7 +19,7 @@ void InitMatrix(float *matrix,int row,int column)
 	}
 }
 
-int LoadMatrix_s(float *matrix,char *filepath,int row,int column)
+int LoadMatrix_s(float *matrix,char *filepath,int row,int column,int type)
 {
 	int i,j;
 	float temp;
@@ -27,7 +27,13 @@ int LoadMatrix_s(float *matrix,char *filepath,int row,int column)
 	fp = fopen(filepath,"r+b");
 	if(!fp)
 		return 0;
-
+	
+	if(type == 1){//read the sample
+		for(i = 0;i<column;i++)
+		{
+			fscanf(fp,"%f",&temp);
+		}
+	}
 	for(i = 0;i < row;i++)
 	{
 		for(j = 0;j < column;j++)
@@ -41,7 +47,7 @@ int LoadMatrix_s(float *matrix,char *filepath,int row,int column)
 	return 1;
 }
 
-int LoadMatrix(float **matrix,char *filepath,int row,int column)
+int LoadMatrix(float **matrix,char *filepath,int row,int column,int type)
 {
 	int i,j;
 	float temp;
@@ -49,7 +55,12 @@ int LoadMatrix(float **matrix,char *filepath,int row,int column)
 	fp = fopen(filepath,"r+b");
 	if(!fp)
 		return 0;
-	
+	if(type == 1){//read the sample
+		for(i = 0;i<column;i++)
+		{
+			fscanf(fp,"%f",&temp);
+		}
+	}
 	for(i = 0;i < row;i++)
 	{
 		for(j = 0;j < column;j++)
