@@ -64,7 +64,7 @@ int main(int argc,char **argv){
 	}
 	/*加载数据集到内存*/
 	printf("begin to load input from the file...\n");
-	if(LoadMatrix(train_set,"../sample/0",TESTDATA,NUMROWS,0) == 0){
+	if(LoadMatrix(train_set,"../sample/0",TESTDATA,NUMROWS,1) == 0){
 		printf("load input file error!!!\n");	
 		return 0;
 	}
