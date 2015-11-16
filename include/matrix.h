@@ -1,7 +1,7 @@
 #ifndef MATRIX_H__
 #define MATRIX_H__
 
-void InitMatrix(float *matrix,int row,int column);
+void InitMatrix(float *matrix,int row,int column,float data);
 
 void FreeMatrix(float **matrix,int row);
 /*matrix add*/

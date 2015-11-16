@@ -41,7 +41,9 @@ int main(int argc,char **argv){
 		Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 		temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 		tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 				/* m * HIDDEN_NEURONS */
-
+#if (ELM_TYPE == CLASSIFICATION_TRAINING)
+		float *tempT = (float *)calloc(m,sizeof(float));
+#endif
 		printf("begin tranning...\n");
 		starttime = MPI_Wtime();
 		//初始化
@@ -66,6 +68,7 @@ int main(int argc,char **argv){
 			MPI_Abort(MPI_COMM_WORLD,-1);
 		}
 		/*将数据集划分成输入和输出*/
+#if (ELM_TYPE == REGRESSION_TRAINING)
 		for(i = 0;i<m*NUMROWS;i++){
 			if(i % NUMROWS == 0){
 				T[k++] = train_set[i];
@@ -73,6 +76,24 @@ int main(int argc,char **argv){
 				input[j++] = train_set[i];
 			}
 		}
+#else
+		InitMatrix(T,m,OUTPUT_NEURONS,-1);
+		for(i = 0;i < m*NUMROWS ;i++)
+		{
+			if(i % NUMROWS == 0){
+				tempT[k++] = train_set[i];
+			}else{
+				input[j++] = train_set[i];
+			}
+		}
+		for(i = 0;i < m ;i++)
+		{
+			k = tempT[i];
+			if(k < OUTPUT_NEURONS && k >= 0){
+				T[k+i*OUTPUT_NEURONS] = 1;
+			}
+		}
+#endif
 		//input * weight + B;
 		MultiplyMatrix_cblas_s(input,m,INPUT_NEURONS,weight,INPUT_NEURONS,HIDDEN_NEURONS,tempI);
 		AddMatrix_bais_s(tempI,bias,m,HIDDEN_NEURONS);
@@ -133,6 +154,9 @@ int main(int argc,char **argv){
 			tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 				/* m * HIDDEN_NEURONS */
 			tempht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 			temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * HIDDEN_NEURONS */
+#if (ELM_TYPE == CLASSIFICATION_TRAINING)
+		float *tempT = (float *)calloc(m,sizeof(float));
+#endif
 			MPI_Bcast(weight,(INPUT_NEURONS)*(HIDDEN_NEURONS),MPI_FLOAT,0,MPI_COMM_WORLD);
 			MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
 			sprintf(dir,"./sample/%d",rank);
@@ -143,6 +167,7 @@ int main(int argc,char **argv){
 				MPI_Abort(MPI_COMM_WORLD,-1);
 			}
 			/*将数据集划分成输入和输出*/
+#if (ELM_TYPE == REGRESSION_TRAINING)
 			for(i = 0;i<m*NUMROWS;i++){
 				if(i % NUMROWS == 0){
 					T[k++] = train_set[i];
@@ -150,6 +175,24 @@ int main(int argc,char **argv){
 					input[j++] = train_set[i];
 				}
 			}
+#else
+			InitMatrix(T,m,OUTPUT_NEURONS,-1);
+			for(i = 0;i < m*NUMROWS ;i++)
+			{
+				if(i % NUMROWS == 0){
+					tempT[k++] = train_set[i];
+				}else{
+					input[j++] = train_set[i];
+				}
+			}
+			for(i = 0;i < m ;i++)
+			{
+				k = tempT[i];
+				if(k < OUTPUT_NEURONS && k >= 0){
+					T[k+i*OUTPUT_NEURONS] = 1;
+				}
+			}
+#endif
 			//input * weight + B;
 			MultiplyMatrix_cblas_s(input,m,INPUT_NEURONS,weight,INPUT_NEURONS,HIDDEN_NEURONS,tempI);
 			AddMatrix_bais_s(tempI,bias,m,HIDDEN_NEURONS);
@@ -187,7 +230,9 @@ int main(int argc,char **argv){
 			Ht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 			/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 			Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 			/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 			tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 				/* m * HIDDEN_NEURONS */
-
+#if (ELM_TYPE == CLASSIFICATION_TRAINING)
+		float *tempT = (float *)calloc(m,sizeof(float));
+#endif
 			MPI_Bcast(weight,(INPUT_NEURONS)*(HIDDEN_NEURONS),MPI_FLOAT,0,MPI_COMM_WORLD);
 			MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
 
@@ -200,6 +245,7 @@ int main(int argc,char **argv){
 			}
 			
 			/*将数据集划分成输入和输出*/
+#if (ELM_TYPE == REGRESSION_TRAINING)
 			for(i = 0;i<m*NUMROWS;i++){
 				if(i % NUMROWS == 0){
 					T[k++] = train_set[i];
@@ -207,6 +253,24 @@ int main(int argc,char **argv){
 					input[j++] = train_set[i];
 				}
 			}
+#else
+			InitMatrix(T,m,OUTPUT_NEURONS,-1);
+			for(i = 0;i < m*NUMROWS ;i++)
+			{
+				if(i % NUMROWS == 0){
+					tempT[k++] = train_set[i];
+				}else{
+					input[j++] = train_set[i];
+				}
+			}
+			for(i = 0;i < m ;i++)
+			{
+				k = tempT[i];
+				if(k < OUTPUT_NEURONS && k >= 0){
+					T[k+i*OUTPUT_NEURONS] = 1;
+				}
+			}
+#endif
 			//input * weight + B;
 			MultiplyMatrix_cblas_s(input,m,INPUT_NEURONS,weight,INPUT_NEURONS,HIDDEN_NEURONS,tempI);
 			AddMatrix_bais_s(tempI,bias,m,HIDDEN_NEURONS);

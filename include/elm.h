@@ -1,5 +1,9 @@
 #ifndef _ELM_H__
 #define _ELM_H__
+/*classification and regression*/
+#define CLASSIFICATION_TRAINING 1
+#define REGRESSION_TRAINING 0
+#define ELM_TYPE CLASSIFICATION_TRAINING
 
 /*number of neurons on every layer*/
 #define NUMROWS 6

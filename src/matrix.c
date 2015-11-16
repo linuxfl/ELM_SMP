@@ -10,12 +10,12 @@
 #include <omp.h>
 #include "../include/matrix.h"
 
-void InitMatrix(float *matrix,int row,int column)
+void InitMatrix(float *matrix,int row,int column,float data)
 {
 	int i;
 	for(i = 0;i < row*column;i++)
 	{
-		matrix[i] = 0.0;
+		matrix[i] = data;
 	}
 }
 
