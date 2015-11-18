@@ -73,7 +73,7 @@ int main(int argc,char **argv)
 	k = 0;
 	count = 0;
 	do{
-		num = read(fd_src,buf,1);
+		num = read(fd_src,buf,128);
 		write(allfd[k],buf,num);
 		count += num;
 		if(count > average_data){
@@ -83,7 +83,7 @@ int main(int argc,char **argv)
 		if(k >= proc_num){
 			break;
 		}
-	}while(num == 1);
+	}while(num == 128);
 	
 	close(fd_src);
 	for(i = 0;i< node_num;i++)
@@ -102,7 +102,7 @@ int main(int argc,char **argv)
 			rank = MPIN_get_node_process_rank(i,j);
 			sprintf(command,"scp %s%d fangling@%s:%s",DIR,rank,arraynode[i].name,DIR);
 			printf("%s\n",command);
-			//system(command);
+			system(command);
 		}
 	}
 	

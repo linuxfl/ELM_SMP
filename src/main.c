@@ -16,6 +16,7 @@ int main(int argc,char **argv){
 	int node_id,master_rank;
 	MPI_Status status;
 	double starttime,endtime;
+	double MSE = 0,TrainingAccuracy;
 	MPI_Init(&argc,&argv);
 	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 	MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -30,7 +31,7 @@ int main(int argc,char **argv){
 	if(rank == 0){
 		char dir[20];
 		int i,j = 0,k = 0,node_id,node_size,process_num,child_rank,node_master_rank;
-		float *Ht,*Hh,*tempht,*temphh,*result,*train_set,*T,*input,*tempI,*tranpH;
+		float *Ht,*Hh,*tempht,*temphh,*result,*train_set,*T,*input,*tempI,*tranpH,*Y;
 		train_set = (float *)calloc(m * NUMROWS,sizeof(float)); 
 		T = (float *)calloc(m * OUTPUT_NEURONS,sizeof(float)); 					/* m * OUTPUT_NEURONS */
 		input = (float *)calloc(m * INPUT_NEURONS,sizeof(float)); 
@@ -41,6 +42,8 @@ int main(int argc,char **argv){
 		Hh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 		temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 	/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 		tranpH = (float *)calloc(HIDDEN_NEURONS * m,sizeof(float)); 				/* m * HIDDEN_NEURONS */
+
+		Y = (float *)calloc(m * OUTPUT_NEURONS,sizeof(float)); 
 #if (ELM_TYPE == CLASSIFICATION_TRAINING)
 		float *tempT = (float *)calloc(m,sizeof(float));
 #endif
@@ -51,6 +54,7 @@ int main(int argc,char **argv){
 		开始定义就进行转置，原行列为HIDDEN_NEURONS*INPUT_NEURONS*/
 		float *weight = (float *)calloc(INPUT_NEURONS*HIDDEN_NEURONS,sizeof(float)); 	/*INPUT_NEURONS * HIDDEN_NEURONS */
 		float *bias = (float *)calloc(HIDDEN_NEURONS,sizeof(float)); 
+		//Init_random();
 		RandomWeight_s(weight,INPUT_NEURONS,HIDDEN_NEURONS);
 		SaveMatrix_s(weight,"./result/weight",INPUT_NEURONS,HIDDEN_NEURONS);	
 		RandomBiase(bias,HIDDEN_NEURONS);
@@ -105,6 +109,7 @@ int main(int argc,char **argv){
 		//HT
 		MultiplyMatrix_cblas_s(tranpH,HIDDEN_NEURONS,m,tempI,m,HIDDEN_NEURONS,Hh);
 		process_num = MPIN_get_node_process_size(node_id);
+
 		for(i = 1;i < process_num;i++){
 			child_rank = MPIN_get_node_process_rank(node_id,i);
 			MPI_Recv(temphh,HIDDEN_NEURONS * HIDDEN_NEURONS,MPI_FLOAT,child_rank,0,MPI_COMM_WORLD,&status);
@@ -115,6 +120,7 @@ int main(int argc,char **argv){
 		//用二叉树算法进行节点间的归约
 		//MPIN_Reduce(Ht,tempht,HIDDEN_NEURONS * OUTPUT_NEURONS,node_id,rank,0);
 		//MPIN_Reduce(Hh,temphh,HIDDEN_NEURONS * HIDDEN_NEURONS,node_id,rank,1);
+
 		node_size = MPIN_get_node_size();
 		for(i = 1;i<node_size;i++)
 		{
@@ -137,7 +143,92 @@ int main(int argc,char **argv){
 		printf("finish trainning...\n");
 		printf("use time :%f \n",endtime - starttime);
 		//回归准确率测试
-		SaveMatrix_s(result,"./result/result",HIDDEN_NEURONS,OUTPUT_NEURONS);	
+		//SaveMatrix_s(result,"./result/result",HIDDEN_NEURONS,OUTPUT_NEURONS);	
+		/*--------------------------------------test----------------------------------------------------------------------*/
+#if (ELM_TYPE == REGRESSION_TRAINING)	
+		if(LoadMatrix_s(train_set,TEST_DATASET,m,NUMROWS,1) == 0){
+			printf("rank %d:load input file error!!!\n",rank);
+			MPI_Abort(MPI_COMM_WORLD,-1);
+		}
+		SaveMatrix_s(train_set,"./result/train_set",m,NUMROWS);
+		k = 0;
+		j = 0;
+		for(i = 0;i<m*NUMROWS;i++){
+			if(i % NUMROWS == 0){
+				T[k++] = train_set[i];
+			}else{
+				input[j++] = train_set[i];
+			}
+		}
+		MultiplyMatrix_cblas_s(input,m,INPUT_NEURONS,weight,INPUT_NEURONS,HIDDEN_NEURONS,tempI);
+		AddMatrix_bais_s(tempI,bias,m,HIDDEN_NEURONS);
+		//sigmoid
+		SigmoidHandle_s(tempI,m,HIDDEN_NEURONS);
+		//TranspositionMatrix_s(tempI,tranpH,m,HIDDEN_NEURONS);
+		MultiplyMatrix_cblas_s(tempI,m,HIDDEN_NEURONS,result,HIDDEN_NEURONS,OUTPUT_NEURONS,Y);
+		SaveMatrix_s(T,"./result/T",m,OUTPUT_NEURONS);
+		SaveMatrix_s(Y,"./result/Y",m,OUTPUT_NEURONS);
+		double MSE = 0,TrainingAccuracy;	
+		for(i = 0;i< m;i++)
+		{
+			MSE += (Y[i] - T[i])*(Y[i] - T[i]);
+		}
+		TrainingAccuracy = sqrt(MSE/m);
+		printf("Regression/trainning accuracy :%f\n",TrainingAccuracy);
+#else
+		if(LoadMatrix_s(train_set,TEST_DATASET,m,NUMROWS,1) == 0){
+			printf("rank %d:load input file error!!!\n",rank);
+			MPI_Abort(MPI_COMM_WORLD,-1);
+		}
+		InitMatrix(T,m,OUTPUT_NEURONS,-1);
+		k = 0;
+		j = 0;
+		for(i = 0;i < m*NUMROWS ;i++)
+		{
+			if(i % NUMROWS == 0){
+				tempT[k++] = train_set[i];
+			}else{
+				input[j++] = train_set[i];
+			}
+		}
+		for(i = 0;i < m ;i++)
+		{
+			k = tempT[i];
+			if(k < OUTPUT_NEURONS && k >= 0){
+				T[k+i*OUTPUT_NEURONS] = 1;
+			}
+		}
+		MultiplyMatrix_cblas_s(input,m,INPUT_NEURONS,weight,INPUT_NEURONS,HIDDEN_NEURONS,tempI);
+		AddMatrix_bais_s(tempI,bias,m,HIDDEN_NEURONS);
+		//sigmoid
+		SigmoidHandle_s(tempI,m,HIDDEN_NEURONS);
+		MultiplyMatrix_cblas_s(tempI,m,HIDDEN_NEURONS,result,HIDDEN_NEURONS,OUTPUT_NEURONS,Y);
+		SaveMatrix_s(T,"./result/T",m,OUTPUT_NEURONS);
+		SaveMatrix_s(Y,"./result/Y",m,OUTPUT_NEURONS);
+		float MissClassificationRate_Training=0,TrainingAccuracy;
+		double maxtag1,maxtag2;
+		int tag1 = 0,tag2 = 0;
+		for (i = 0; i < m; i++) {
+			maxtag1 = Y[i * OUTPUT_NEURONS];
+			tag1 = 0;
+			maxtag2 = T[i * OUTPUT_NEURONS];
+			tag2 = 0;
+			for (j = i * OUTPUT_NEURONS + 1; j < i * OUTPUT_NEURONS + OUTPUT_NEURONS ; j++) {
+				if(Y[j] > maxtag1){
+					maxtag1 = Y[j];
+					tag1 = j;
+				}
+				if(T[j] > maxtag2){
+					maxtag2 = T[j];
+					tag2 = j;
+				}
+			}
+			if(tag1 != tag2)
+		    	MissClassificationRate_Training ++;
+		}
+		TrainingAccuracy = 1 - MissClassificationRate_Training*1.0f/m;
+		printf("Classification/trainning accuracy :%f\n",TrainingAccuracy);
+#endif
 	}else if(rank == master_rank){
 			int i,j = 0,k = 0;
 			int process_num,child_rank;
@@ -155,7 +246,7 @@ int main(int argc,char **argv){
 			tempht = (float *)calloc(HIDDEN_NEURONS * OUTPUT_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * OUTPUT_NEURONS */
 			temphh = (float *)calloc(HIDDEN_NEURONS * HIDDEN_NEURONS,sizeof(float)); 		/* HIDDEN_NEURONS * HIDDEN_NEURONS */
 #if (ELM_TYPE == CLASSIFICATION_TRAINING)
-		float *tempT = (float *)calloc(m,sizeof(float));
+			float *tempT = (float *)calloc(m,sizeof(float));
 #endif
 			MPI_Bcast(weight,(INPUT_NEURONS)*(HIDDEN_NEURONS),MPI_FLOAT,0,MPI_COMM_WORLD);
 			MPI_Bcast(bias,HIDDEN_NEURONS,MPI_FLOAT,0,MPI_COMM_WORLD);
@@ -215,6 +306,7 @@ int main(int argc,char **argv){
 			//再将累加结果在节点间二叉树算法进行归约
 			//MPIN_Reduce(Ht,tempht,HIDDEN_NEURONS * OUTPUT_NEURONS,node_id,rank,0);
 			//MPIN_Reduce(Hh,temphh,HIDDEN_NEURONS * HIDDEN_NEURONS,node_id,rank,1);
+
 			MPI_Send(Hh,HIDDEN_NEURONS * HIDDEN_NEURONS,MPI_FLOAT,0,0,MPI_COMM_WORLD);
 			MPI_Send(Ht,HIDDEN_NEURONS * OUTPUT_NEURONS,MPI_FLOAT,0,1,MPI_COMM_WORLD);
 		}else{

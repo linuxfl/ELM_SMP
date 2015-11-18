@@ -22,17 +22,22 @@ void InitMatrix(float *matrix,int row,int column,float data)
 int LoadMatrix_s(float *matrix,char *filepath,int row,int column,int type)
 {
 	int i,j;
+	size_t len;
 	float temp;
 	FILE *fp;
+	char *line = NULL;
 	fp = fopen(filepath,"r+b");
 	if(!fp)
 		return 0;
 	
 	if(type == 1){//read the sample
-		for(i = 0;i<column;i++)
-		{
-			fscanf(fp,"%f",&temp);
-		}
+		//for(i=0;i<column;i++)
+		//{
+			//fscanf(fp,"%f",&temp);
+			getline(&line, &len, fp);
+		//}
+		if(line != NULL)
+			free(line);
 	}
 	for(i = 0;i < row;i++)
 	{
@@ -50,16 +55,21 @@ int LoadMatrix_s(float *matrix,char *filepath,int row,int column,int type)
 int LoadMatrix(float **matrix,char *filepath,int row,int column,int type)
 {
 	int i,j;
+	size_t len;
 	float temp;
 	FILE *fp;
+	char *line = NULL;
 	fp = fopen(filepath,"r+b");
 	if(!fp)
 		return 0;
 	if(type == 1){//read the sample
-		for(i = 0;i<column;i++)
-		{
-			fscanf(fp,"%f",&temp);
-		}
+		//for(i=0;i<column;i++)
+		//{
+			//fscanf(fp,"%f",&temp);
+			getline(&line, &len, fp);
+		//}
+		if(line != NULL)
+			free(line);
 	}
 	for(i = 0;i < row;i++)
 	{
@@ -87,6 +97,7 @@ int SaveMatrix(float **matrix,char *filepath,int row,int column)
 		}
 		fprintf(fp,"\n");
 	}
+	fclose(fp);
 	return 1;
 }
 int SaveMatrix_s(float *matrix,char *filepath,int row,int column)
@@ -103,6 +114,7 @@ int SaveMatrix_s(float *matrix,char *filepath,int row,int column)
 		}
 		fprintf(fp,"\n");
 	}
+	fclose(fp);
 	return 1;
 }
 void FreeMatrix(float **matrix,int row)

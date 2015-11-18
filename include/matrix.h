@@ -2,7 +2,6 @@
 #define MATRIX_H__
 
 void InitMatrix(float *matrix,int row,int column,float data);
-
 void FreeMatrix(float **matrix,int row);
 /*matrix add*/
 int AddMatrix_bais(float **matrix,float *biase,int row,int column);

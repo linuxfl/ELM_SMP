@@ -4,6 +4,12 @@
 #include <omp.h>
 #include "../include/elm.h"
 #include "../include/matrix.h"
+#include <time.h>
+
+void Init_random()
+{
+	srand(time(0));
+}
 
 float RandomFloat(float start,float end)
 {
